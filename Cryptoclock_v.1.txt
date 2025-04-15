@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crypto Clock Gadget</title>
+  <style>
+    :root {
+      --bg-color-light: #f0f0f0;
+      --text-color-light: #111;
+      --card-bg-light: #fff;
+      --bg-color-dark: #0d1117;
+      --text-color-dark: white;
+      --card-bg-dark: #161b22;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: var(--bg-color-dark);
+      color: var(--text-color-dark);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      transition: all 0.3s ease;
+    }
+    .gadget {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--card-bg-dark);
+      border: 2px solid #30363d;
+      border-radius: 16px;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      transition: all 0.3s ease;
+    }
+    .clock {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .crypto-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      width: 100%;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .crypto {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      min-width: 45%;
+    }
+    select, .currency-select {
+      margin-bottom: 10px;
+      padding: 6px;
+      background: #21262d;
+      color: white;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      width: 100%;
+    }
+    .price {
+      font-size: 1.2rem;
+      text-align: center;
+      word-wrap: break-word;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .theme-toggle {
+      padding: 6px 12px;
+      background: #30363d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    @media (max-width: 500px) {
+      .clock {
+        font-size: 2rem;
+      }
+      .price {
+        font-size: 1rem;
+      }
+      select, .currency-select {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="gadget" id="gadget">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="crypto-container">
+      <div class="crypto">
+        <select id="coin-left"></select>
+        <div class="price" id="price-left">$0.00</div>
+      </div>
+      <div class="crypto">
+        <select id="coin-right"></select>
+        <div class="price" id="price-right">$0.00</div>
+      </div>
+    </div>
+    <div class="controls">
+      <select class="currency-select" id="currency-select">
+        <option value="usd">USD</option>
+        <option value="thb">THB</option>
+        <option value="eur">EUR</option>
+      </select>
+      <button class="theme-toggle" onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+  </div>
+
+  <script>
+    let currentCurrency = 'usd';
+    let isDarkMode = true;
+
+    const topCoins = [
+      { id: 'bitcoin', symbol: 'BTC' },
+      { id: 'ethereum', symbol: 'ETH' },
+      { id: 'tether', symbol: 'USDT' },
+      { id: 'usd-coin', symbol: 'USDC' },
+      { id: 'binancecoin', symbol: 'BNB' },
+      { id: 'ripple', symbol: 'XRP' },
+      { id: 'cardano', symbol: 'ADA' },
+      { id: 'solana', symbol: 'SOL' },
+      { id: 'bitkub-coin', symbol: 'KUB' },
+      { id: 'dogecoin', symbol: 'DOGE' },
+      { id: 'avalanche-2', symbol: 'AVAX' },
+      { id: 'polkadot', symbol: 'DOT' },
+      { id: 'tron', symbol: 'TRX' },
+      { id: 'polygon', symbol: 'MATIC' },  // Added MATIC
+      { id: 'optimism', symbol: 'OP' }     // Added OP
+    ];
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = now.toLocaleTimeString();
+    }
+
+    async function fetchPrice(coinId, currency) {
+      try {
+        const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=${currency}`);
+        const data = await res.json();
+        return data[coinId]?.[currency] ?? 0;
+      } catch (err) {
+        console.error('Error fetching price:', err);
+        return 0;
+      }
+    }
+
+    async function updatePrices() {
+      const leftCoin = document.getElementById('coin-left').value;
+      const rightCoin = document.getElementById('coin-right').value;
+      const [leftPrice, rightPrice] = await Promise.all([
+        fetchPrice(leftCoin, currentCurrency),
+        fetchPrice(rightCoin, currentCurrency)
+      ]);
+      document.getElementById('price-left').textContent = `${leftPrice.toLocaleString()} ${currentCurrency.toUpperCase()}`;
+      document.getElementById('price-right').textContent = `${rightPrice.toLocaleString()} ${currentCurrency.toUpperCase()}`;
+    }
+
+    function toggleTheme() {
+      isDarkMode = !isDarkMode;
+      const root = document.documentElement;
+      const gadget = document.getElementById('gadget');
+      if (isDarkMode) {
+        document.body.style.backgroundColor = getComputedStyle(root).getPropertyValue('--bg-color-dark');
+        document.body.style.color = getComputedStyle(root).getPropertyValue('--text-color-dark');
+        gadget.style.background = getComputedStyle(root).getPropertyValue('--card-bg-dark');
+      } else {
+        document.body.style.backgroundColor = getComputedStyle(root).getPropertyValue('--bg-color-light');
+        document.body.style.color = getComputedStyle(root).getPropertyValue('--text-color-light');
+        gadget.style.background = getComputedStyle(root).getPropertyValue('--card-bg-light');
+      }
+    }
+
+    function populateCoins() {
+      const leftSelect = document.getElementById('coin-left');
+      const rightSelect = document.getElementById('coin-right');
+      topCoins.forEach((coin) => {
+        const option1 = document.createElement('option');
+        option1.value = coin.id;
+        option1.textContent = coin.symbol;
+
+        const option2 = option1.cloneNode(true);
+
+        leftSelect.appendChild(option1);
+        rightSelect.appendChild(option2);
+      });
+
+      leftSelect.value = 'bitcoin';
+      rightSelect.value = 'ethereum';
+
+      updatePrices();
+    }
+
+    updateClock();
+    populateCoins();
+    setInterval(updateClock, 1000);
+    setInterval(updatePrices, 10000);
+
+    document.getElementById('coin-left').addEventListener('change', updatePrices);
+    document.getElementById('coin-right').addEventListener('change', updatePrices);
+    document.getElementById('currency-select').addEventListener('change', (e) => {
+      currentCurrency = e.target.value;
+      updatePrices();
+    });
+  </script>
+</body>
+</html>
